@@ -1,0 +1,18 @@
+# ansible-monitoring/roles/loki/handlers/main.yml
+
+--- # Début du fichier YAML
+
+# Handler pour recharger systemd (nécessaire après avoir créé/modifié un fichier .service)
+- name: Reload systemd and Restart Loki
+  ansible.builtin.systemd:
+    daemon_reload: yes # Recharger la configuration de systemd
+    name: loki
+    state: restarted
+
+- name: Reload systemd and Restart Promtail
+  ansible.builtin.systemd:
+    daemon_reload: yes # Recharger la configuration de systemd
+    name: promtail
+    state: restarted
+
+# Si tu as d'autres handlers pour Loki ou Promtail, ils iraient ici.

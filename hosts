@@ -1,0 +1,9 @@
+# ansible-monitoring/hosts
+
+# Définit un groupe de serveurs appelé 'monitoring_servers'.
+# Tu peux définir plusieurs groupes et y ajouter plusieurs machines.
+[monitoring_servers]
+# Définit une machine appelée 'debian_vm'.
+# 'ansible_host' spécifie l'adresse IP ou le nom d'hôte de cette machine.
+# Dans ton cas, c'est l'adresse IP de ta VM Debian.
+debian_vm ansible_host=192.168.1.14

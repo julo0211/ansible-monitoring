@@ -1,0 +1,22 @@
+# ansible-monitoring/roles/prometheus/handlers/main.yml
+
+---
+# Handler pour recharger systemd (nécessaire après avoir créé/modifié un fichier .service)
+- name: Reload systemd and Restart Prometheus
+  ansible.builtin.systemd:
+    daemon_reload: yes
+    name: prometheus
+    state: restarted
+
+# Handler pour redémarrer le service Prometheus
+- name: Restart Prometheus
+  ansible.builtin.systemd:
+    name: prometheus
+    state: restarted
+
+# Handler pour recharger systemd et redémarrer Node Exporter
+- name: Reload systemd and Restart Node Exporter
+  ansible.builtin.systemd:
+    daemon_reload: yes
+    name: node_exporter
+    state: restarted

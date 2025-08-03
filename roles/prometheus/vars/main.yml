@@ -1,0 +1,8 @@
+# ansible-monitoring/roles/prometheus/vars/main.yml
+
+---
+# Définit la version de Prometheus à installer.
+prometheus_version: "2.53.0"
+
+# Définit la version de Node Exporter à installer.
+node_exporter_version: "1.8.1"

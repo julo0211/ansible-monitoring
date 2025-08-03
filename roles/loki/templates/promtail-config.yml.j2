@@ -1,0 +1,59 @@
+# ansible-monitoring/roles/loki/templates/promtail-config.yml.j2
+
+# Configuration de Promtail - Générée par Ansible
+# Promtail est l'agent qui collecte les logs et les envoie à Loki.
+
+server:
+  http_listen_port: 9080 # Port HTTP sur lequel Promtail écoute (pour le monitoring de Promtail lui-même).
+  grpc_listen_port: 0    # Désactive le port gRPC pour Promtail si non nécessaire.
+
+positions:
+  # Fichier pour stocker les positions des logs déjà lus.
+  # Permet à Promtail de reprendre la lecture là où il s'est arrêté après un redémarrage.
+  filename: /tmp/positions.yaml
+
+clients:
+  # Définit la ou les instances Loki auxquelles Promtail enverra les logs.
+  - url: http://localhost:3100/loki/api/v1/push # L'URL de l'endpoint d'ingestion de Loki.
+
+scrape_configs:
+  # Définit les configurations de "scraping" (collecte) de logs.
+  # Chaque 'job_name' définit un ensemble de logs à collecter.
+
+  # Job 1: Collecte les logs du journal système (via systemd journal).
+  - job_name: systemd_journal
+    journal:
+      path: /var/log/journal # Chemin par défaut du journal systemd.
+      max_age: 12h # Ne lit pas les entrées plus anciennes que 12 heures au démarrage.
+      # Labels statiques ajoutés à toutes les entrées de log de ce job.
+      labels:
+        job: systemd-journal
+        host: "{{ inventory_hostname }}" # Ajoute le nom d'hôte de la machine cible comme label.
+                                       # Utile pour filtrer les logs par machine dans Grafana.
+
+  # Job 2: Collecte les logs génériques du système de fichiers (ex: /var/log/syslog).
+  - job_name: var_log
+    # Configuration pour le "relabeling" des étiquettes, très puissant pour extraire des infos des logs.
+    relabel_configs:
+      # Capture le nom du fichier de log et l'ajoute comme label 'filename'.
+      - source_labels: ['__journal__systemd_unit']
+        regex: '(.*)\.service'
+        target_label: 'systemd_unit'
+        replacement: '$1'
+        action: replace
+      # Capture le nom du fichier de log et l'ajoute comme label 'filename'.
+      - source_labels: ['__file__']
+        regex: '.*\/([^\/]+)\.log$'
+        target_label: 'filename'
+        action: replace
+
+    # Configuration pour les cibles de "scraping" (où trouver les logs).
+    static_configs:
+      - targets:
+          - localhost # La cible pour Promtail lui-même (puisqu'il tourne en local).
+        # Labels statiques ajoutés à toutes les entrées de log de ce job.
+        labels:
+          job: var_log # Nom du job pour ce scrape.
+          __path__: /var/log/*log # Chemin des fichiers de logs à collecter.
+                                  # Le double astérisque inclut les sous-répertoires et les fichiers.
+          host: "{{ inventory_hostname }}" # Nom d'hôte de la machine cible.

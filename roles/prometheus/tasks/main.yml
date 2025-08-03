@@ -1,0 +1,142 @@
+# ansible-monitoring/roles/prometheus/tasks/main.yml
+
+--- # Début du fichier YAML
+
+# Tâche 1: Création des utilisateurs et groupes pour Prometheus et Node Exporter
+# Pour des raisons de sécurité, les services Prometheus ne doivent pas s'exécuter avec l'utilisateur 'root'.
+- name: Create Prometheus group
+  ansible.builtin.group:
+    name: prometheus
+    system: yes
+    state: present
+
+- name: Create Prometheus user
+  ansible.builtin.user:
+    name: prometheus
+    group: prometheus
+    system: yes
+    shell: /bin/false
+    create_home: no
+    state: present
+
+- name: Create Node Exporter user
+  ansible.builtin.user:
+    name: node_exporter
+    group: prometheus # Le Node Exporter peut être dans le même groupe que Prometheus.
+    system: yes
+    shell: /bin/false
+    create_home: no
+    state: present
+
+# Tâche 2: Création des répertoires pour les binaires et les données
+- name: Create Prometheus data directory
+  ansible.builtin.file:
+    path: /var/lib/prometheus
+    state: directory
+    owner: prometheus
+    group: prometheus
+    mode: '0755'
+
+- name: Create Prometheus config directory
+  ansible.builtin.file:
+    path: /etc/prometheus
+    state: directory
+    owner: prometheus
+    group: prometheus
+    mode: '0755'
+
+- name: Create Prometheus binaries directory
+  ansible.builtin.file:
+    path: /usr/local/bin
+    state: directory
+    mode: '0755'
+
+# Tâche 3: Téléchargement et installation de Prometheus
+- name: Download Prometheus binary
+  ansible.builtin.get_url:
+    url: "https://github.com/prometheus/prometheus/releases/download/v{{ prometheus_version }}/prometheus-{{ prometheus_version }}.linux-amd64.tar.gz"
+    dest: "/tmp/prometheus-{{ prometheus_version }}.linux-amd64.tar.gz"
+    mode: '0644'
+
+- name: Unarchive and install Prometheus
+  ansible.builtin.unarchive:
+    src: "/tmp/prometheus-{{ prometheus_version }}.linux-amd64.tar.gz"
+    dest: "/tmp"
+    remote_src: yes
+  become: no # Cette tâche s'exécute en tant qu'utilisateur distant, pas en tant que root pour éviter les soucis de permissions.
+
+- name: Move Prometheus binaries to /usr/local/bin
+  ansible.builtin.copy:
+    src: "/tmp/prometheus-{{ prometheus_version }}.linux-amd64/{{ item }}"
+    dest: "/usr/local/bin/{{ item }}"
+    remote_src: yes
+    owner: prometheus
+    group: prometheus
+    mode: '0755'
+  loop:
+    - prometheus
+    - promtool
+
+# Tâche 4: Téléchargement et installation de Node Exporter
+- name: Download Node Exporter binary
+  ansible.builtin.get_url:
+    url: "https://github.com/prometheus/node_exporter/releases/download/v{{ node_exporter_version }}/node_exporter-{{ node_exporter_version }}.linux-amd64.tar.gz"
+    dest: "/tmp/node_exporter-{{ node_exporter_version }}.linux-amd64.tar.gz"
+    mode: '0644'
+
+- name: Unarchive and install Node Exporter
+  ansible.builtin.unarchive:
+    src: "/tmp/node_exporter-{{ node_exporter_version }}.linux-amd64.tar.gz"
+    dest: "/tmp"
+    remote_src: yes
+  become: no
+
+- name: Move Node Exporter binary to /usr/local/bin
+  ansible.builtin.copy:
+    src: "/tmp/node_exporter-{{ node_exporter_version }}.linux-amd64/node_exporter"
+    dest: "/usr/local/bin/node_exporter"
+    remote_src: yes
+    owner: node_exporter
+    group: prometheus
+    mode: '0755'
+
+# Tâche 5: Déploiement des fichiers de configuration et de service
+- name: Deploy Prometheus configuration file
+  ansible.builtin.template:
+    src: prometheus.yml.j2
+    dest: /etc/prometheus/prometheus.yml
+    owner: prometheus
+    group: prometheus
+    mode: '0644'
+  notify: Restart Prometheus
+
+- name: Deploy Prometheus systemd service file
+  ansible.builtin.template:
+    src: prometheus.service.j2
+    dest: /etc/systemd/system/prometheus.service
+    owner: root
+    group: root
+    mode: '0644'
+  notify: Reload systemd and Restart Prometheus
+
+- name: Deploy Node Exporter systemd service file
+  ansible.builtin.template:
+    src: node_exporter.service.j2
+    dest: /etc/systemd/system/node_exporter.service
+    owner: root
+    group: root
+    mode: '0644'
+  notify: Reload systemd and Restart Node Exporter
+
+# Tâche 6: S'assurer que les services sont démarrés et activés
+- name: Ensure Prometheus service is started and enabled
+  ansible.builtin.systemd:
+    name: prometheus
+    state: started
+    enabled: yes
+
+- name: Ensure Node Exporter service is started and enabled
+  ansible.builtin.systemd:
+    name: node_exporter
+    state: started
+    enabled: yes

@@ -1,0 +1,9 @@
+# ansible-monitoring/roles/common/vars/main.yml
+
+--- # Séparateur YAML
+# Variables spécifiques au rôle 'common' peuvent être ajoutées ici.
+# Ex:
+# common_packages:
+#   - curl
+#   - wget
+# ...

@@ -1,0 +1,19 @@
+# ansible-monitoring/roles/loki/templates/promtail.service.j2
+
+[Unit]
+Description=Promtail service
+After=network.target
+
+[Service]
+Type=simple
+User=loki
+Group=loki
+ExecStart=/usr/local/bin/promtail -config.file /etc/loki/promtail-config.yml
+Restart=on-failure
+LimitNOFILE=1048576
+LimitNPROC=1048576
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

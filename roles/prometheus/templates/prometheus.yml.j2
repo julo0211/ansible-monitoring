@@ -1,0 +1,18 @@
+# ansible-monitoring/roles/prometheus/templates/prometheus.yml.j2
+
+# Fichier de configuration de Prometheus
+global:
+  # L'intervalle de temps entre chaque "scrape" (collecte) de métriques.
+  scrape_interval: 15s
+
+# Configuration des cibles de collecte de métriques.
+scrape_configs:
+  # Job pour collecter les métriques de Prometheus lui-même.
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # Job pour collecter les métriques du système via Node Exporter.
+  - job_name: 'node_exporter'
+    static_configs:
+      - targets: ['localhost:9100']

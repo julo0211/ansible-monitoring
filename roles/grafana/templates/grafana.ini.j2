@@ -1,0 +1,90 @@
+# ansible-monitoring/roles/grafana/templates/grafana.ini.j2
+
+# Fichier de configuration de Grafana - Généré par Ansible.
+# Ce fichier contrôle les paramètres généraux de Grafana.
+
+[paths]
+# Chemin vers le répertoire des données de Grafana.
+# Assure la persistance des bases de données SQLite, sessions, etc.
+data = /var/lib/grafana
+
+# Chemin vers les journaux de Grafana.
+logs = /var/log/grafana
+
+# Chemin vers les plugins Grafana (tableaux de bord, sources de données).
+plugins = /var/lib/grafana/plugins
+
+# Chemin vers le répertoire des fichiers de provisioning (sources de données, tableaux de bord, etc.).
+# Permet de configurer Grafana via des fichiers plutôt qu'exclusivement via l'UI.
+provisioning = /etc/grafana/provisioning
+
+[server]
+# URL de base de Grafana.
+# Par défaut, Grafana écoute sur toutes les interfaces (0.0.0.0) sur le port 3000.
+# Si tu souhaites le lier à une IP spécifique, tu peux décommenter et modifier cette ligne.
+#http_addr = 0.0.0.0
+
+# Port HTTP sur lequel Grafana écoute.
+http_port = 3000
+
+# Nom du domaine utilisé pour les redirections et les liens dans l'interface.
+# Si tu accèdes à Grafana via une IP, cela peut être ton IP ou un nom de domaine si tu en as un.
+# domain = localhost
+
+# Active/désactive le protocole HTTPS. Pour un TP local, HTTP est suffisant.
+#protocol = http
+
+# Désactive le mode développement. Pour une installation de production, mettre à 'false'.
+# C'est souvent laissé à true pour les tests.
+#cert_file = /etc/grafana/grafana.crt
+#cert_key = /etc/grafana/grafana.key
+
+[database]
+# Type de base de données utilisée par Grafana. 'sqlite3' est par défaut et suffisant pour un TP.
+type = sqlite3
+# Chemin vers le fichier de la base de données SQLite.
+path = /var/lib/grafana/grafana.db
+
+[security]
+# Utilisateur et mot de passe par défaut pour la première connexion.
+# Grafana te demandera de changer ce mot de passe à la première connexion.
+admin_user = admin
+admin_passwd = admin
+
+# Force les utilisateurs à changer leur mot de passe par défaut à la première connexion.
+#force_user_profile_update = true
+
+[users]
+# Permet ou non la création de comptes utilisateurs via l'interface de connexion de Grafana.
+# Par défaut à 'true', tu peux le désactiver si tu veux un contrôle strict sur les utilisateurs.
+allow_sign_up = true
+
+[auth.anonymous]
+# Permet l'accès anonyme aux tableaux de bord.
+# Si mis à 'true', les utilisateurs peuvent voir les tableaux de bord sans se connecter.
+enabled = false
+
+[auth.basic]
+# Active l'authentification basique par nom d'utilisateur/mot de passe.
+enabled = true
+
+[auth.ldap]
+# Configuration pour l'authentification via LDAP (non utilisée pour ce TP).
+enabled = false
+
+[auth.proxy]
+# Configuration pour l'authentification via un proxy inverse (non utilisée pour ce TP).
+enabled = false
+
+[analytics]
+# Active/désactive l'envoi de statistiques d'utilisation anonymes à Grafana Labs.
+reporting_enabled = false
+
+[log]
+# Niveau de journalisation de Grafana.
+mode = console
+level = info
+
+# Si tu souhaites pré-configurer des sources de données via des fichiers de provisioning,
+# tu pourrais ajouter une section ici et des fichiers dans /etc/grafana/provisioning/datasources.
+# Pour ce TP, la configuration manuelle via l'UI de Grafana est plus simple pour la source Loki.

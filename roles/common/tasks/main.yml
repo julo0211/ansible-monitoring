@@ -1,0 +1,52 @@
+# ansible-monitoring/roles/common/tasks/main.yml
+
+--- # Séparateur YAML
+
+# Tâche pour mettre à jour le cache des paquets APT.
+# C'est important pour s'assurer que les informations sur les paquets sont à jour
+# avant d'essayer d'en installer de nouveaux.
+- name: Update apt cache
+  ansible.builtin.apt:
+    update_cache: yes # Demande une mise à jour du cache APT.
+    cache_valid_time: 3600 # Définit la durée de validité du cache en secondes (ici 1 heure).
+                           # Si le cache est plus ancien, il sera mis à jour.
+
+# Tâche pour installer les paquets système courants qui peuvent être utiles.
+- name: Install common packages
+  ansible.builtin.apt:
+    name: # Liste des paquets à installer.
+      - curl                # Outil pour transférer des données via différentes protocoles réseau.
+      - wget                # Outil pour télécharger des fichiers depuis le web.
+      - gnupg               # Pour gérer les clés GPG, nécessaire pour vérifier les dépôts.
+      - apt-transport-https # Permet à APT d'utiliser des dépôts HTTPS.
+      - software-properties-common # Utilitaires pour gérer les dépôts de logiciels.
+    state: present # S'assure que ces paquets sont installés.
+
+# Tâche pour créer le groupe système 'loki'.
+# Loki et Promtail s'exécutent souvent sous un utilisateur/groupe dédié pour des raisons de sécurité.
+- name: Add 'loki' group
+  ansible.builtin.group:
+    name: loki    # Nom du groupe à créer.
+    system: true  # Crée un groupe système (ID bas, non pour les utilisateurs interactifs).
+    state: present # S'assure que le groupe existe.
+
+# Tâche pour créer l'utilisateur système 'loki'.
+- name: Add 'loki' user
+  ansible.builtin.user:
+    name: loki        # Nom de l'utilisateur à créer.
+    group: loki       # Assigne cet utilisateur au groupe 'loki' créé juste avant.
+    system: true      # Crée un utilisateur système.
+    shell: /bin/false # Définit un shell invalide, car cet utilisateur n'est pas destiné à se connecter interactivement.
+    create_home: false # Ne crée pas de répertoire personnel pour cet utilisateur.
+    state: present    # S'assure que l'utilisateur existe.
+
+# Tâche pour créer le répertoire où Loki et Promtail stockeront leurs données.
+# L'emplacement '/var/lib/loki' est une bonne pratique pour les données persistantes,
+# contrairement à '/tmp' qui est souvent effacé au redémarrage.
+- name: Create base directory for Loki and Promtail data
+  ansible.builtin.file:
+    path: /var/lib/loki # Chemin du répertoire à créer.
+    state: directory    # S'assure que c'est un répertoire.
+    owner: loki         # Définit 'loki' comme propriétaire du répertoire.
+    group: loki         # Définit 'loki' comme groupe du répertoire.
+    mode: '0755'        # Définit les permissions : rwxr-xr-x (lecture/écriture/exécution pour propriétaire, lecture/exécution pour groupe et autres).

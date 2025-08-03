@@ -1,0 +1,41 @@
+# ansible-monitoring/site.yml
+
+--- # Ceci est un séparateur YAML standard, indiquant le début d'un nouveau document.
+
+# Définit le nom de ce playbook, utile pour la lisibilité des logs Ansible.
+- name: Deploy Monitoring Stack
+
+  # Spécifie les hôtes (machines) sur lesquels ce playbook doit s'exécuter.
+  # Ici, nous ciblons toutes les machines qui appartiennent au groupe 'monitoring_servers'
+  # défini dans ton fichier d'inventaire 'hosts'.
+  hosts: monitoring_servers
+
+  # Indique à Ansible d'exécuter toutes les tâches de ce playbook avec des privilèges élevés (root/sudo).
+  # Cela est nécessaire pour installer des paquets, modifier des fichiers système, etc.
+  become: true
+
+  # Les 'pre_tasks' sont des tâches qui s'exécutent avant l'inclusion des rôles.
+  # Elles sont utiles pour des configurations initiales ou des vérifications.
+  pre_tasks:
+    # Nom de la tâche, pour une meilleure lisibilité dans la sortie d'Ansible.
+    - name: Ensure Python is installed for Ansible on Debian
+      # Utilise le module 'raw' pour exécuter une commande shell brute sur la cible.
+      # C'est souvent utilisé au début car Ansible lui-même a besoin de Python
+      # pour exécuter d'autres modules plus complexes.
+      ansible.builtin.raw: apt update && apt install -y python3
+      # Indique à Ansible de ne pas considérer cette tâche comme ayant apporté des "changements"
+      # même si la commande 'apt update' peut parfois retourner un code de sortie différent.
+      # C'est principalement pour la propreté de la sortie.
+      changed_when: false
+
+  # La section 'roles' liste les rôles Ansible à exécuter.
+  # Ansible exécutera les tâches de chaque rôle dans l'ordre spécifié.
+  roles:
+    # Le rôle 'common' s'exécutera en premier pour les pré-requis système.
+    - common
+    # Ensuite, les rôles spécifiques à chaque composant de ta stack de monitoring.
+    # L'ordre est important : Loki et Promtail peuvent être installés avant Grafana,
+    # car Grafana aura besoin de se connecter à Loki. Prometheus peut venir après.
+    #- loki
+    - grafana
+    - prometheus

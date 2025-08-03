@@ -1,0 +1,10 @@
+# ansible-monitoring/roles/grafana/handlers/main.yml
+
+--- # Début du fichier YAML
+
+# Handler pour redémarrer le service Grafana.
+# Il est notifié par la tâche 'Deploy Grafana configuration file' si le fichier grafana.ini change.
+- name: Restart Grafana
+  ansible.builtin.systemd:
+    name: grafana-server # Nom du service Grafana à redémarrer.
+    state: restarted # Action pour redémarrer le service.

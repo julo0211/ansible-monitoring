@@ -1,0 +1,34 @@
+# ansible-monitoring/roles/grafana/tasks/main.yml
+
+--- # Début du fichier YAML
+
+# Tâche 1: Installation de Grafana
+# Grafana utilise le même dépôt APT que Loki et Promtail, que nous avons déjà ajouté
+# via le rôle 'loki'. On peut donc directement procéder à l'installation du paquet.
+- name: Install Grafana
+  ansible.builtin.apt: # Utilise le module apt pour gérer les paquets Debian/Ubuntu.
+    name: grafana # Nom du paquet Grafana à installer.
+    state: present # S'assure que le paquet est installé.
+    update_cache: yes # Met à jour le cache APT avant l'installation, au cas où.
+
+# Tâche 2: Déploiement du fichier de configuration de Grafana
+# Grafana est configuré via le fichier grafana.ini. Nous utilisons un template Jinja2
+# pour insérer des valeurs dynamiques si nécessaire, bien que pour une installation de base,
+# de nombreuses valeurs par défaut soient suffisantes.
+- name: Deploy Grafana configuration file
+  ansible.builtin.template: # Module 'template' pour générer des fichiers à partir de Jinja2.
+    src: grafana.ini.j2 # Chemin vers le template (relatif au dossier 'templates' du rôle).
+    dest: /etc/grafana/grafana.ini # Destination du fichier configuré sur la machine cible.
+    owner: grafana # Propriétaire du fichier (l'utilisateur système de Grafana).
+    group: grafana # Groupe du fichier.
+    mode: '0644' # Permissions du fichier : lecture/écriture pour le propriétaire, lecture seule pour les autres.
+  notify: Restart Grafana # Déclenche le handler 'Restart Grafana' si ce fichier est modifié.
+
+# Tâche 3: S'assurer que le service Grafana est démarré et activé
+# Configure Grafana pour qu'il démarre automatiquement au boot du système
+# et s'assure qu'il est en cours d'exécution.
+- name: Ensure Grafana service is started and enabled
+  ansible.builtin.systemd: # Module pour gérer les services systemd.
+    name: grafana-server # Nom du service systemd de Grafana.
+    state: started # S'assure que le service est démarré.
+    enabled: yes # S'assure que le service démarre automatiquement au boot.

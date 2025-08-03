@@ -1,0 +1,19 @@
+# ansible-monitoring/roles/loki/templates/loki.service.j2
+
+[Unit]
+Description=Loki service
+After=network.target
+
+[Service]
+Type=simple
+User=loki
+Group=loki
+ExecStart=/usr/local/bin/loki -config.file /etc/loki/config.yml
+Restart=on-failure
+LimitNOFILE=1048576
+LimitNPROC=1048576
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

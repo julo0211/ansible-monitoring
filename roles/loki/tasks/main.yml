@@ -1,0 +1,147 @@
+# ansible-monitoring/roles/loki/tasks/main.yml
+
+--- # Début du fichier YAML
+
+# Tâches pour l'installation de Loki et Promtail via binaires téléchargés (contournement des problèmes APT)
+
+# Tâche 1: Définir les versions des binaires (variables pour faciliter les mises à jour futures)
+- name: Set Loki and Promtail versions
+  ansible.builtin.set_fact:
+    loki_version: "2.9.0" # Version stable et largement utilisée
+    promtail_version: "2.9.0" # Promtail doit correspondre à la version de Loki
+
+# Tâche 2: Télécharger le binaire de Loki
+- name: Download Loki binary
+  ansible.builtin.get_url:
+    url: "https://github.com/grafana/loki/releases/download/v{{ loki_version }}/loki-linux-amd64.zip"
+    dest: "/tmp/loki-linux-amd64-{{ loki_version }}.zip"
+    mode: '0644'
+
+# Tâche 3: Télécharger le binaire de Promtail
+- name: Download Promtail binary
+  ansible.builtin.get_url:
+    url: "https://github.com/grafana/loki/releases/download/v{{ promtail_version }}/promtail-linux-amd64.zip"
+    dest: "/tmp/promtail-linux-amd64-{{ promtail_version }}.zip"
+    mode: '0644'
+
+# Tâche 4: Installer unzip (nécessaire pour décompresser les binaires)
+- name: Install unzip
+  ansible.builtin.apt:
+    name: unzip
+    state: present
+
+# Tâche 5: Créer les répertoires d'installation pour Loki et Promtail
+- name: Create /usr/local/bin directory for Loki and Promtail
+  ansible.builtin.file:
+    path: /usr/local/bin
+    state: directory
+    mode: '0755'
+
+# ... (tasks avant) ...
+
+# Tâche 6: Décompresser et placer le binaire de Loki
+- name: Unzip and place Loki binary
+  ansible.builtin.unarchive:
+    src: "/tmp/loki-linux-amd64-{{ loki_version }}.zip"
+    dest: "/usr/local/bin/"
+    remote_src: yes
+    creates: "/usr/local/bin/loki-linux-amd64" # <-- Changer cette ligne pour le nom après décompression
+  args:
+    extra_opts: ['-j']
+  become: true
+
+# AJOUTE CETTE NOUVELLE TÂCHE POUR RENOMMER LOKI
+- name: Rename Loki binary to 'loki'
+  ansible.builtin.command: mv /usr/local/bin/loki-linux-amd64 /usr/local/bin/loki
+  args:
+    creates: /usr/local/bin/loki # Ne s'exécute que si 'loki' n'existe pas
+  become: true # Exécute avec sudo
+
+# Tâche 7: Décompresser et placer le binaire de Promtail
+- name: Unzip and place Promtail binary
+  ansible.builtin.unarchive:
+    src: "/tmp/promtail-linux-amd64-{{ promtail_version }}.zip"
+    dest: "/usr/local/bin/"
+    remote_src: yes
+    creates: "/usr/local/bin/promtail-linux-amd64" # <-- Changer cette ligne pour le nom après décompression
+  args:
+    extra_opts: ['-j']
+  become: true
+
+# AJOUTE CETTE NOUVELLE TÂCHE POUR RENOMMER PROMTAIL
+- name: Rename Promtail binary to 'promtail'
+  ansible.builtin.command: mv /usr/local/bin/promtail-linux-amd64 /usr/local/bin/promtail
+  args:
+    creates: /usr/local/bin/promtail # Ne s'exécute que si 'promtail' n'existe pas
+  become: true
+
+# Tâche 8: Rendre les binaires exécutables
+- name: Make Loki and Promtail binaries executable
+  ansible.builtin.file:
+    path: "{{ item }}"
+    mode: '0755'
+  loop:
+    - /usr/local/bin/loki
+    - /usr/local/bin/promtail
+
+# Tâche 9: Créer le répertoire de configuration pour Loki
+- name: Create Loki config directory (/etc/loki/)
+  ansible.builtin.file:
+    path: /etc/loki
+    state: directory
+    owner: loki
+    group: loki
+    mode: '0755'
+
+# Tâche 10: Déploiement du fichier de configuration de Loki
+- name: Deploy Loki configuration file
+  ansible.builtin.template:
+    src: loki-config.yml.j2
+    dest: /etc/loki/config.yml
+    owner: loki
+    group: loki
+    mode: '0644'
+  notify: Reload systemd and Restart Loki # <-- MODIFIE CETTE LIGNE
+
+# Tâche 11: Déploiement du fichier de configuration de Promtail
+- name: Deploy Promtail configuration file
+  ansible.builtin.template:
+    src: promtail-config.yml.j2
+    dest: /etc/loki/promtail-config.yml
+    owner: loki
+    group: loki
+    mode: '0644'
+  notify: Reload systemd and Restart Promtail # <-- MODIFIE CETTE LIGNE
+
+# Tâche 12: Créer le fichier de service systemd pour Loki (nécessaire car pas d'installation par paquet)
+- name: Create systemd service file for Loki
+  ansible.builtin.template:
+    src: loki.service.j2 # Nouveau template à créer
+    dest: /etc/systemd/system/loki.service
+    owner: root
+    group: root
+    mode: '0644'
+  notify: Reload systemd and Restart Loki
+
+# Tâche 13: Créer le fichier de service systemd pour Promtail
+- name: Create systemd service file for Promtail
+  ansible.builtin.template:
+    src: promtail.service.j2 # Nouveau template à créer
+    dest: /etc/systemd/system/promtail.service
+    owner: root
+    group: root
+    mode: '0644'
+  notify: Reload systemd and Restart Promtail
+
+# Tâche 14: S'assurer que les services Loki et Promtail sont démarrés et activés
+- name: Ensure Loki service is started and enabled
+  ansible.builtin.systemd:
+    name: loki
+    state: started
+    enabled: yes
+
+- name: Ensure Promtail service is started and enabled
+  ansible.builtin.systemd:
+    name: promtail
+    state: started
+    enabled: yes
